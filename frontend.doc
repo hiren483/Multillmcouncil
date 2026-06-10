@@ -1,0 +1,229 @@
+Perfect. Your root structure is already correct:
+MULTILLMCOUNCIL/
+
+├── frontend/
+├── backend/
+├── README.md
+├── backend.doc
+└── ContextWindow.doc
+Now the biggest mistake React developers make is creating folders based on file type instead of features.
+Don't do this:
+src/
+
+├── components/
+│   ├── Button.tsx
+│   ├── Chat.tsx
+│   ├── Message.tsx
+│   ├── Sidebar.tsx
+│   └── ...
+│
+├── hooks/
+├── services/
+├── utils/
+After 2 months you'll have 100 files in components.
+
+Architecture I Recommend
+src
+src/
+
+├── app/
+│
+├── features/
+│
+├── shared/
+│
+├── pages/
+│
+├── services/
+│
+├── store/
+│
+├── types/
+│
+├── App.tsx
+└── main.tsx
+
+app/
+Application-wide setup.
+app/
+
+├── router.tsx
+├── providers.tsx
+└── constants.ts
+Examples:
+* React Router
+* Theme provider
+* Global configs
+
+features/
+This is where 90% of code lives.
+features/
+
+├── chat/
+│
+├── conversation/
+│
+├── models/
+│
+├── memory/
+│
+└── settings/
+Each feature owns everything related to itself.
+
+chat feature
+features/chat/
+
+├── components/
+│   ├── ChatInput.tsx
+│   ├── ChatWindow.tsx
+│   └── MessageBubble.tsx
+│
+├── hooks/
+│   └── useChat.ts
+│
+├── api/
+│   └── chatApi.ts
+│
+├── types/
+│   └── chat.types.ts
+│
+└── index.ts
+Everything chat-related stays here.
+
+conversation feature
+features/conversation/
+
+├── components/
+│   ├── ConversationList.tsx
+│   └── ConversationItem.tsx
+│
+├── api/
+│   └── conversationApi.ts
+│
+├── types/
+│   └── conversation.types.ts
+│
+└── index.ts
+
+models feature
+For AI model selection.
+features/models/
+
+├── components/
+│   ├── ModelSelector.tsx
+│   └── ModelBadge.tsx
+│
+├── data/
+│   └── models.ts
+│
+└── index.ts
+
+shared/
+Reusable things.
+shared/
+
+├── ui/
+│   ├── Button.tsx
+│   ├── Input.tsx
+│   ├── Modal.tsx
+│   └── Card.tsx
+│
+├── hooks/
+│
+├── utils/
+│
+└── lib/
+Only truly reusable components go here.
+
+pages/
+pages/
+
+├── ChatPage.tsx
+├── SettingsPage.tsx
+└── NotFoundPage.tsx
+Pages compose features.
+
+services/
+External integrations.
+services/
+
+├── axios.ts
+└── api.ts
+
+store/
+Zustand.
+store/
+
+├── chatStore.ts
+├── conversationStore.ts
+└── modelStore.ts
+
+types/
+Global types.
+types/
+
+├── message.ts
+├── conversation.ts
+└── api.ts
+
+Initial UI Structure
+For the first version:
+ChatPage
+
+├── Sidebar
+│
+├── ChatWindow
+│
+├── MessageBubble
+│
+├── ChatInput
+│
+└── ModelSelector
+Visually:
+┌────────────┬─────────────────────┐
+│            │                     │
+│ Sidebar    │ Chat Messages       │
+│            │                     │
+│            │                     │
+├────────────┼─────────────────────┤
+│            │ Chat Input          │
+└────────────┴─────────────────────┘
+
+One Important Rule
+For LLM Council:
+Never let components talk directly to APIs.
+Bad:
+ChatInput
+  -> fetch()
+Good:
+ChatInput
+    ↓
+chatStore
+    ↓
+chatApi
+    ↓
+backend
+This becomes extremely important once:
+* streaming responses
+* multiple models
+* memory retrieval
+* file uploads
+are added.
+
+If I were building this tomorrow, I'd first create:
+src/
+
+app/
+features/chat/
+features/conversation/
+features/models/
+shared/ui/
+pages/
+store/
+services/
+types/
+and then build only:
+1. Sidebar
+2. ChatWindow
+3. ChatInput
+4. ModelSelector

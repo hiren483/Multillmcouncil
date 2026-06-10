@@ -1,0 +1,329 @@
+This is actually the **most important engineering decision** in the entire project.
+
+Most beginners think:
+
+```text
+User Message
+↓
+Send entire chat history to GPT
+```
+
+Works for 20 messages.
+
+Dies at 200 messages.
+
+Costs a fortune.
+
+---
+
+# V1 (Build This First)
+
+Keep it stupidly simple.
+
+Database:
+
+```sql
+conversations
+messages
+```
+
+When user sends:
+
+```text
+@gpt explain transformers
+```
+
+Backend does:
+
+```text
+Last 20 messages
++
+Current message
+↓
+GPT
+```
+
+Something like:
+
+```python
+context = messages[-20:]
+```
+
+Done.
+
+No vector DB.
+
+No embeddings.
+
+No RAG.
+
+No memory.
+
+This gets you moving.
+
+---
+
+# V2 (Conversation Summary)
+
+When conversation becomes large:
+
+```text
+100 messages
+```
+
+You create a summary.
+
+Example:
+
+```text
+Summary:
+- User is building LLM Council
+- Frontend uses React
+- Backend uses FastAPI
+- OpenRouter chosen
+- Shared memory planned
+```
+
+Store in DB:
+
+```sql
+conversation_summaries
+```
+
+Then prompt becomes:
+
+```text
+Conversation Summary
+
++
+Last 20 Messages
+
++
+Current Message
+```
+
+Now you can have thousands of messages.
+
+---
+
+# V3 (Real Shared Memory)
+
+This is where things get interesting.
+
+Create memory objects.
+
+Instead of storing:
+
+```text
+Message 1
+Message 2
+Message 3
+...
+```
+
+Store facts:
+
+```json
+{
+ "type":"project",
+ "content":"Project name is LLM Council"
+}
+
+{
+ "type":"tech_stack",
+ "content":"Frontend uses React and Tailwind"
+}
+
+{
+ "type":"decision",
+ "content":"OpenRouter selected"
+}
+```
+
+Every important fact becomes memory.
+
+---
+
+# V4 (Vector Memory)
+
+Now add:
+
+```text
+Qdrant
+```
+
+or
+
+```text
+pgvector
+```
+
+Honestly I'd use **pgvector** first.
+
+You already need PostgreSQL.
+
+No reason to run another database.
+
+---
+
+Flow:
+
+User asks:
+
+```text
+How should I structure the backend?
+```
+
+Backend:
+
+```text
+Current Message
+↓
+Convert to embedding
+↓
+Search memory
+↓
+Retrieve relevant facts
+↓
+Inject into prompt
+↓
+Send to model
+```
+
+Retrieved memories:
+
+```text
+- Project is LLM Council
+- Using FastAPI
+- Using OpenRouter
+```
+
+GPT receives those automatically.
+
+---
+
+# How Shared Memory Works Across Models
+
+This is the cool part.
+
+Suppose:
+
+```text
+@gpt
+
+I want React + FastAPI
+```
+
+GPT answers.
+
+Store memory:
+
+```json
+{
+ "content":"Tech stack is React + FastAPI"
+}
+```
+
+Later:
+
+```text
+@claude
+
+How should I deploy?
+```
+
+Claude gets:
+
+```text
+Relevant Memory:
+
+Tech stack is React + FastAPI.
+```
+
+Claude now behaves as if it was present earlier.
+
+This creates the illusion that all models share one brain.
+
+---
+
+# The Architecture I Would Build
+
+```text
+User
+ ↓
+Frontend
+ ↓
+FastAPI
+
+ ┌───────────────────┐
+ │ PostgreSQL        │
+ │ messages          │
+ │ memories          │
+ │ summaries         │
+ └───────────────────┘
+
+ ↓
+
+Memory Service
+
+ ↓
+
+Context Builder
+
+ ↓
+
+OpenRouter
+
+ ↓
+
+GPT / Claude / Gemini
+```
+
+---
+
+# Context Window Strategy
+
+For MVP:
+
+```text
+Summary
++
+Last 15-20 messages
++
+Retrieved Memories
++
+Current Prompt
+```
+
+Example:
+
+```text
+[PROJECT SUMMARY]
+
+User is building LLM Council.
+Frontend uses React.
+Backend uses FastAPI.
+
+[RELEVANT MEMORIES]
+
+User wants shared memory architecture.
+OpenRouter is selected.
+
+[RECENT MESSAGES]
+
+Last 20 chat messages.
+
+[CURRENT USER MESSAGE]
+
+How should we implement authentication?
+```
+
+That prompt is then sent to GPT, Claude, Gemini, etc.
+
+---
+
+The key insight is:
+
+**Never try to send the entire conversation.**
+
+Treat conversation history like a book:

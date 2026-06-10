@@ -1,0 +1,423 @@
+Good. Before writing a single backend endpoint, let's freeze the architecture.
+
+For **LLM Council V1**, your backend should have exactly one responsibility:
+
+> Receive a message → build context → route to selected model → store everything.
+
+Nothing more.
+
+# Backend Architecture
+
+```text
+backend/
+
+├── app/
+│
+├── routers/
+│   ├── chat.py
+│   ├── conversation.py
+│   └── memory.py
+│
+├── services/
+│   ├── context_builder.py
+│   ├── memory_service.py
+│   ├── conversation_service.py
+│   └── openrouter_service.py
+│
+├── providers/
+│   └── openrouter.py
+│
+├── models/
+│   ├── conversation.py
+│   ├── message.py
+│   └── memory.py
+│
+├── db/
+│   ├── database.py
+│   └── schemas.py
+│
+├── utils/
+│
+├── main.py
+├── requirements.txt
+└── .env
+```
+
+---
+
+# Database Design
+
+### conversations
+
+```sql
+id
+title
+created_at
+updated_at
+```
+
+Example:
+
+```text
+LLM Council Architecture
+```
+
+---
+
+### messages
+
+```sql
+id
+conversation_id
+role
+model
+content
+created_at
+```
+
+Example:
+
+```text
+role = user
+model = null
+
+role = assistant
+model = gpt-4o
+```
+
+---
+
+### memories
+
+```sql
+id
+conversation_id
+memory_type
+content
+importance
+created_at
+```
+
+Example:
+
+```text
+memory_type = tech_stack
+
+content = React + FastAPI
+```
+
+---
+
+### summaries
+
+```sql
+id
+conversation_id
+summary
+updated_at
+```
+
+Example:
+
+```text
+User is building LLM Council
+Uses OpenRouter
+Uses React + FastAPI
+```
+
+---
+
+# Request Flow
+
+User sends:
+
+```text
+@gpt explain transformers
+```
+
+Frontend:
+
+```json
+{
+  "conversation_id": 1,
+  "model": "gpt",
+  "message": "explain transformers"
+}
+```
+
+---
+
+# Chat Router
+
+```python
+POST /chat
+```
+
+Receives request.
+
+Then:
+
+```text
+Chat Router
+↓
+Conversation Service
+↓
+Context Builder
+↓
+OpenRouter Service
+↓
+Response
+↓
+Store Message
+```
+
+---
+
+# Context Builder
+
+Most important service.
+
+Input:
+
+```text
+Conversation ID
+Current Message
+```
+
+Builds:
+
+```text
+Conversation Summary
+
++
+Relevant Memories
+
++
+Last 20 Messages
+
++
+Current Prompt
+```
+
+Returns:
+
+```python
+full_context
+```
+
+This service becomes the heart of the backend.
+
+---
+
+# OpenRouter Service
+
+Single responsibility:
+
+```python
+send_message(
+    model,
+    context
+)
+```
+
+Example:
+
+```python
+send_message(
+    "openai/gpt-4o",
+    context
+)
+```
+
+Later:
+
+```python
+send_message(
+    "anthropic/claude-sonnet-4",
+    context
+)
+```
+
+Everything goes through OpenRouter.
+
+---
+
+# Memory Service
+
+V1:
+
+```text
+Store memories manually
+```
+
+Example:
+
+User says:
+
+```text
+I am using React and FastAPI
+```
+
+Store:
+
+```text
+React + FastAPI
+```
+
+---
+
+V2:
+
+Automatic extraction.
+
+Prompt:
+
+```text
+Extract important project facts.
+```
+
+LLM returns:
+
+```json
+[
+ {
+  "type":"tech_stack",
+  "content":"React + FastAPI"
+ }
+]
+```
+
+Store automatically.
+
+This is where the "shared memory" magic starts.
+
+---
+
+# Model Tagging Logic
+
+Input:
+
+```text
+@gpt Explain transformers
+```
+
+Backend parses:
+
+```python
+model = "gpt"
+message = "Explain transformers"
+```
+
+Route:
+
+```python
+GPT
+```
+
+---
+
+Input:
+
+```text
+@claude Review GPT answer
+```
+
+Route:
+
+```python
+Claude
+```
+
+Very simple.
+
+---
+
+# Cross Model Review
+
+This is the first advanced feature I'd build.
+
+User:
+
+```text
+@gpt Design a startup
+```
+
+GPT responds.
+
+Store response.
+
+Later:
+
+```text
+@claude Critique GPT answer
+```
+
+Backend:
+
+```text
+Fetch GPT response
++
+Conversation Context
+↓
+Send to Claude
+```
+
+Now models appear to collaborate.
+
+Very impressive for relatively little code.
+
+---
+
+# API Endpoints
+
+V1 only:
+
+```python
+POST /chat
+
+GET /conversations
+
+POST /conversation
+
+GET /conversation/{id}
+
+DELETE /conversation/{id}
+```
+
+That's enough.
+
+Don't build 20 endpoints.
+
+---
+
+# Development Order
+
+### Week 1
+
+```text
+FastAPI setup
+PostgreSQL
+Conversation table
+Messages table
+```
+
+---
+
+### Week 2
+
+```text
+OpenRouter integration
+Model routing
+Chat endpoint
+```
+
+---
+
+### Week 3
+
+```text
+Shared history
+Context builder
+Streaming responses
+```
+
